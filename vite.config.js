@@ -5,6 +5,11 @@ export default defineConfig({
   base: process.env.VITE_BASE ?? '/',
   build: {
     target: 'esnext',
+    rollupOptions: {
+      output: {
+        inlineDynamicImports: true,
+      },
+    },
   },
   plugins: [{
     name: 'copy-assets',
