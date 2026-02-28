@@ -1,0 +1,22 @@
+{
+  "name": "gravel-run",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@box2d/core": "^0.11.0",
+    "pixi.js": "^8.16.0"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1"
+  }
+}
