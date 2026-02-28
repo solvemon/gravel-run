@@ -1,9 +1,34 @@
 import { Application, Container, Graphics, TilingSprite, Assets, Sprite } from 'pixi.js';
 import { b2World, b2BodyType, b2PolygonShape, b2CircleShape, b2WheelJointDef, b2LinearStiffness, b2ContactListener } from '@box2d/core';
 
+// --- Debug: catch all errors and display them on screen ---
+function showError(msg) {
+  const el = document.createElement('pre');
+  Object.assign(el.style, {
+    position: 'fixed', top: '0', left: '0', zIndex: '9999',
+    background: 'red', color: 'white', padding: '12px',
+    fontSize: '13px', maxWidth: '100vw', whiteSpace: 'pre-wrap',
+  });
+  el.textContent = msg;
+  document.body.appendChild(el);
+}
+window.onerror = (msg, src, line, col, err) =>
+  showError(`ERROR: ${msg}\n${src}:${line}\n${err?.stack ?? ''}`);
+window.addEventListener('unhandledrejection', e =>
+  showError(`UNHANDLED REJECTION:\n${e.reason?.stack ?? e.reason}`));
+
+console.log('[1] script start');
 const app = new Application();
-await app.init({ width: 800, height: 500, background: 0x6cc2d9 });
+console.log('[2] before app.init');
+await Promise.race([
+  app.init({ width: 800, height: 500, background: 0x6cc2d9 }),
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('app.init() timed out (8s) — likely WebGL context lost')), 8000)
+  ),
+]);
+console.log('[3] after app.init');
 document.body.appendChild(app.canvas);
+console.log('[4] canvas appended');
 
 const base = import.meta.env.BASE_URL;
 const [skyTexture, mountainTexture, carBodyTexture, carWheelTexture] = await Promise.all([
