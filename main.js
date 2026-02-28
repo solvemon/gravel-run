@@ -18,12 +18,23 @@ window.addEventListener('unhandledrejection', e =>
   showError(`UNHANDLED REJECTION:\n${e.reason?.stack ?? e.reason}`));
 
 console.log('[1] script start');
+
+// Pre-flight: check WebGL is actually usable before handing control to PixiJS
+const _testCanvas = document.createElement('canvas');
+const _gl = _testCanvas.getContext('webgl2') || _testCanvas.getContext('webgl');
+if (!_gl) throw new Error('WebGL is not available in this browser/environment.');
+console.log('[1b] WebGL pre-flight OK, renderer:', _gl.getParameter(_gl.RENDERER));
+_testCanvas.remove();
+
 const app = new Application();
 console.log('[2] before app.init');
 await Promise.race([
-  app.init({ width: 800, height: 500, background: 0x6cc2d9 }),
+  app.init({ width: 800, height: 500, background: 0x6cc2d9, preference: 'webgl' }),
   new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('app.init() timed out (8s) — likely WebGL context lost')), 8000)
+    setTimeout(() => reject(new Error(
+      'app.init() timed out (8s) — WebGL context was lost and could not be restored.\n' +
+      'Try: open in an incognito window, use a different browser, or check chrome://gpu'
+    )), 8000)
   ),
 ]);
 console.log('[3] after app.init');
