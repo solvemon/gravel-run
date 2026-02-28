@@ -5,11 +5,12 @@ const app = new Application();
 await app.init({ width: 800, height: 500, background: 0x6cc2d9 });
 document.body.appendChild(app.canvas);
 
+const base = import.meta.env.BASE_URL;
 const [skyTexture, mountainTexture, carBodyTexture, carWheelTexture] = await Promise.all([
-  Assets.load('/assets/sky.png'),
-  Assets.load('/assets/mountain.png'),
-  Assets.load('/assets/car-body.png'),
-  Assets.load('/assets/car-wheel.png'),
+  Assets.load(`${base}assets/sky.png`),
+  Assets.load(`${base}assets/mountain.png`),
+  Assets.load(`${base}assets/car-body.png`),
+  Assets.load(`${base}assets/car-wheel.png`),
 ]);
 
 // --- Parallax layers ---
