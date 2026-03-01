@@ -1,4 +1,4 @@
-import { Sprite } from 'pixi.js';
+import { Sprite, Container } from 'pixi.js';
 import { b2BodyType, b2PolygonShape, b2CircleShape, b2WheelJointDef, b2LinearStiffness } from '@box2d/core';
 import { SCALE } from './constants.js';
 
@@ -18,7 +18,12 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture }) {
     friction: 0.3,
   });
 
-  // --- Wheels (added to scene first so they render behind the car body) ---
+  // Visual pivot — sits at the chassis physics centre and rotates with it.
+  // All truck sprites are children so they automatically follow chassis tilt.
+  const pivot = new Container();
+  scene.addChild(pivot);
+
+  // --- Wheels (added to pivot first so they render behind the car body) ---
   function makeWheel(px, py) {
     const body = world.CreateBody({
       type: b2BodyType.b2_dynamicBody,
@@ -43,7 +48,7 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture }) {
     const sprite = new Sprite(carWheelTexture);
     sprite.anchor.set(0.5);
     sprite.width = sprite.height = WHEEL_R * 2;
-    scene.addChild(sprite);
+    pivot.addChild(sprite); // child of pivot — position expressed in chassis-local coords
 
     return { body, sprite, joint };
   }
@@ -51,12 +56,11 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture }) {
   const frontWheel = makeWheel(320, 195);
   const rearWheel  = makeWheel(480, 195);
 
-  // --- Car body sprite (rendered on top of wheels) ---
-  // Scaled to match physics chassis width (691×194 px source image)
+  // --- Car body sprite (added after wheels so it renders on top) ---
   const chassisSprite = new Sprite(carBodyTexture);
   chassisSprite.anchor.set(0.5);
   chassisSprite.scale.set((CHASSIS_HW * 2) / carBodyTexture.width);
-  scene.addChild(chassisSprite);
+  pivot.addChild(chassisSprite);
 
   let rpm = 0;
 
@@ -79,15 +83,27 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture }) {
       }
 
       const cp = chassisBody.GetPosition();
-      chassisSprite.x        = cp.x * SCALE;
-      chassisSprite.y        = cp.y * SCALE + params.carBodyYOffset;
-      chassisSprite.rotation = chassisBody.GetAngle();
+      const ca = chassisBody.GetAngle();
 
-      for (const { body, sprite } of [frontWheel, rearWheel]) {
-        const wp    = body.GetPosition();
-        sprite.x        = wp.x * SCALE;
-        sprite.y        = wp.y * SCALE;
-        sprite.rotation = body.GetAngle();
+      // Move and rotate the pivot to match chassis physics transform
+      pivot.x        = cp.x * SCALE;
+      pivot.y        = cp.y * SCALE;
+      pivot.rotation = ca;
+
+      // Chassis sprite at pivot centre — only needs the visual ride-height offset
+      chassisSprite.x = 0;
+      chassisSprite.y = params.carBodyYOffset;
+
+      // Wheel sprites in chassis-local space:
+      //   x = lateral anchor position (fixed)
+      //   y = anchor y + suspension travel along chassis-local y-axis
+      // PixiJS applies the pivot rotation automatically — no manual trig required.
+      for (const { body, sprite, joint } of [frontWheel, rearWheel]) {
+        const la = joint.GetLocalAnchorA();    // chassis-local anchor (metres)
+        const t  = joint.GetJointTranslation(); // suspension travel (metres)
+        sprite.x        = la.x * SCALE;
+        sprite.y        = (la.y + t) * SCALE;
+        sprite.rotation = body.GetAngle() - ca; // wheel spin relative to chassis
       }
     },
 
