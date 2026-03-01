@@ -6,11 +6,11 @@ const CHASSIS_HW = 120; // px half-width
 const CHASSIS_HH = 20;  // px half-height
 const WHEEL_R    = 29;  // px radius — 29/48 ≈ 0.60 m → ~1.2 m diameter
 
-export function createTruck(world, scene, { carBodyTexture, carWheelTexture }) {
+export function createTruck(world, scene, { carBodyTexture, carWheelTexture, groundY = 460 }) {
   // --- Chassis ---
   const chassisBody = world.CreateBody({
     type: b2BodyType.b2_dynamicBody,
-    position: { x: 400 / SCALE, y: 150 / SCALE },
+    position: { x: 400 / SCALE, y: (groundY - 310) / SCALE },
   });
   chassisBody.CreateFixture({
     shape: new b2PolygonShape().SetAsBox(CHASSIS_HW / SCALE, CHASSIS_HH / SCALE),
@@ -53,8 +53,8 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture }) {
     return { body, sprite, joint };
   }
 
-  const frontWheel = makeWheel(320, 195);
-  const rearWheel  = makeWheel(480, 195);
+  const frontWheel = makeWheel(320, groundY - 265);
+  const rearWheel  = makeWheel(480, groundY - 265);
 
   // --- Car body sprite (added after wheels so it renders on top) ---
   const chassisSprite = new Sprite(carBodyTexture);

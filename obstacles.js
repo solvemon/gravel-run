@@ -2,8 +2,6 @@ import { Sprite } from 'pixi.js';
 import { b2BodyType, b2PolygonShape } from '@box2d/core';
 import { SCALE } from './constants.js';
 
-const GROUND_Y = 460; // px — top of the ground plane
-
 // Squares smaller than this (half-size px) use the stone texture; larger ones get a crate.
 const CRATE_THRESHOLD = 8;
 
@@ -20,7 +18,8 @@ function makeHexagon(r) {
   return shape;
 }
 
-export function createObstacleSystem(world, scene, { stoneTexture, crateTexture }) {
+export function createObstacleSystem(world, scene, { stoneTexture, crateTexture, groundY = 460 }) {
+  let GROUND_Y     = groundY;
   const obstacles  = [];
   const bodies     = new Set(); // exposed so main.js can set up the contact listener
   let lastSpawnX   = 800;      // px — rightmost spawned position
@@ -73,6 +72,7 @@ export function createObstacleSystem(world, scene, { stoneTexture, crateTexture 
     bodies,
     get count() { return obstacles.length; },
     get total() { return totalSpawned; },
+    setGroundY(y) { GROUND_Y = y; },
 
     // Called every frame — spawns ahead and despawns behind the camera
     update(camLeft, camRight, distanceM) {

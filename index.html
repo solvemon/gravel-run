@@ -8,17 +8,10 @@
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
         background: #000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden; /* prevent page scroll — canvas scales to fit instead */
+        overflow: hidden;
       }
       canvas {
-        max-width: 100vw;
-        max-height: 100vh;
-        height: auto; /* maintain aspect ratio when max-width kicks in (portrait) */
+        display: block; /* kill the inline bottom gap */
       }
     </style>
   </head>

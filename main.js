@@ -8,7 +8,7 @@ import { createUI, createTouchControls } from './ui.js';
 
 // --- App ---
 const app = new Application();
-await app.init({ width: 800, height: 500, background: 0x6cc2d9 });
+await app.init({ width: window.innerWidth, height: window.innerHeight, background: 0x6cc2d9 });
 document.body.appendChild(app.canvas);
 app.canvas.style.touchAction = 'none'; // prevent browser scroll/zoom while playing
 
@@ -23,14 +23,17 @@ const [skyTexture, mountainTexture, carBodyTexture, carWheelTexture, stoneTextur
   Assets.load(`${base}assets/crate.png`),
 ]);
 
+// Ground level — 92 % down the screen; everything is derived from this.
+let GROUND_Y = Math.round(app.screen.height * 0.92);
+
 // --- Parallax background ---
-const skySprite = new TilingSprite({ texture: skyTexture, width: 800, height: skyTexture.height });
-skySprite.y = 460 - skyTexture.height; // pin bottom of texture to ground line
+const skySprite = new TilingSprite({ texture: skyTexture, width: app.screen.width, height: skyTexture.height });
+skySprite.y = GROUND_Y - skyTexture.height; // pin bottom of texture to ground line
 app.stage.addChild(skySprite);
 
 const MTN_H = 220;
-const mountainSprite = new TilingSprite({ texture: mountainTexture, width: 800, height: MTN_H });
-mountainSprite.y = 460 - MTN_H;
+const mountainSprite = new TilingSprite({ texture: mountainTexture, width: app.screen.width, height: MTN_H });
+mountainSprite.y = GROUND_Y - MTN_H;
 app.stage.addChild(mountainSprite);
 
 // --- Scrolling scene ---
@@ -40,10 +43,12 @@ app.stage.addChild(scene);
 // --- Physics world ---
 const world = b2World.Create({ x: 0, y: 10 });
 
-// Static ground body — repositioned each frame to follow the truck (infinite ground trick)
-const groundBody = world.CreateBody({ position: { x: 0, y: 470 / SCALE } });
+// Static ground body — repositioned each frame to follow the truck (infinite ground trick).
+// Body centre sits 10 px below GROUND_Y so the top surface aligns exactly with GROUND_Y.
+const groundBody = world.CreateBody({ position: { x: 0, y: (GROUND_Y + 10) / SCALE } });
 groundBody.CreateFixture({ shape: new b2PolygonShape().SetAsBox(500, 10 / SCALE), friction: 1.0 });
-const groundGfx = new Graphics().rect(-500 * SCALE, 460, 500 * SCALE * 2, 40).fill(0x4a7c2f);
+const groundGfx = new Graphics().rect(-500 * SCALE, 0, 500 * SCALE * 2, 2000).fill(0x4a7c2f);
+groundGfx.y = GROUND_Y;
 scene.addChild(groundGfx);
 
 // --- Tunable parameters (sliders write directly into this object) ---
@@ -65,8 +70,8 @@ const params = {
 };
 
 // --- Game systems ---
-const truck     = createTruck(world, scene, { carBodyTexture, carWheelTexture });
-const obstacles = createObstacleSystem(world, scene, { stoneTexture, crateTexture });
+const truck     = createTruck(world, scene, { carBodyTexture, carWheelTexture, groundY: GROUND_Y });
+const obstacles = createObstacleSystem(world, scene, { stoneTexture, crateTexture, groundY: GROUND_Y });
 const audio     = await createAudio();
 const ui        = createUI(params, {
   onSuspChange:  () => truck.applySuspension(params),
@@ -120,11 +125,26 @@ app.ticker.add((ticker) => {
   ui.update({ score: distanceM, spawned: obstacles.total, alive: obstacles.count, rpm: truck.rpm });
 
   // Keep ground centred on the chassis so it never ends
-  groundBody.SetTransformXY(cp.x, 470 / SCALE, 0);
+  groundBody.SetTransformXY(cp.x, (GROUND_Y + 10) / SCALE, 0);
   groundGfx.x = camX;
 
   // Camera and parallax
   scene.x = app.screen.width / 2 - camX;
   skySprite.tilePosition.x      = scene.x * 0.05;
   mountainSprite.tilePosition.x = scene.x * 0.15;
+});
+
+// --- Resize handler ---
+window.addEventListener('resize', () => {
+  app.renderer.resize(window.innerWidth, window.innerHeight);
+  GROUND_Y = Math.round(app.screen.height * 0.92);
+
+  skySprite.width      = app.screen.width;
+  skySprite.y          = GROUND_Y - skyTexture.height;
+
+  mountainSprite.width = app.screen.width;
+  mountainSprite.y     = GROUND_Y - MTN_H;
+
+  groundGfx.y = GROUND_Y;
+  obstacles.setGroundY(GROUND_Y);
 });
