@@ -53,8 +53,12 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture, gro
     return { body, sprite, joint };
   }
 
-  const frontWheel = makeWheel(320, groundY - 265);
-  const rearWheel  = makeWheel(480, groundY - 265);
+  const SPAWN_CX   = 400;
+  const SPAWN_CY   = groundY - 310;
+  const SPAWN_WY   = groundY - 265;
+
+  const frontWheel = makeWheel(SPAWN_CX - 80, SPAWN_WY);
+  const rearWheel  = makeWheel(SPAWN_CX + 80, SPAWN_WY);
 
   // --- Car body sprite (added after wheels so it renders on top) ---
   const chassisSprite = new Sprite(carBodyTexture);
@@ -107,6 +111,21 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture, gro
         sprite.rotation = body.GetAngle() - ca; // wheel spin relative to chassis
         sprite.width = sprite.height = params.wheelRadius * 2; // visual size from slider
       }
+    },
+
+    // Teleport everything back to spawn and zero all velocities
+    reset() {
+      rpm = 0;
+      const zero = { x: 0, y: 0 };
+      chassisBody.SetTransformXY(SPAWN_CX / SCALE, SPAWN_CY / SCALE, 0);
+      chassisBody.SetLinearVelocity(zero);
+      chassisBody.SetAngularVelocity(0);
+      frontWheel.body.SetTransformXY((SPAWN_CX - 80) / SCALE, SPAWN_WY / SCALE, 0);
+      frontWheel.body.SetLinearVelocity(zero);
+      frontWheel.body.SetAngularVelocity(0);
+      rearWheel.body.SetTransformXY((SPAWN_CX + 80) / SCALE, SPAWN_WY / SCALE, 0);
+      rearWheel.body.SetLinearVelocity(zero);
+      rearWheel.body.SetAngularVelocity(0);
     },
 
     // Call when suspFreq or suspDamping changes

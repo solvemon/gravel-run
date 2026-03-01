@@ -14,13 +14,21 @@ app.canvas.style.touchAction = 'none'; // prevent browser scroll/zoom while play
 
 // --- Assets ---
 const base = import.meta.env.BASE_URL;
-const [skyTexture, mountainTexture, carBodyTexture, carWheelTexture, stoneTexture, crateTexture] = await Promise.all([
+const [
+  skyTexture, mountainTexture, carBodyTexture, carWheelTexture,
+  stoneTexture, stone2Texture, crateTexture,
+  log1Texture, log2Texture, log3Texture,
+] = await Promise.all([
   Assets.load(`${base}assets/sky.png`),
   Assets.load(`${base}assets/mountain.png`),
   Assets.load(`${base}assets/car-body.png`),
   Assets.load(`${base}assets/car-wheel.png`),
   Assets.load(`${base}assets/stone.png`),
+  Assets.load(`${base}assets/stone2.png`),
   Assets.load(`${base}assets/crate.png`),
+  Assets.load(`${base}assets/log1.png`),
+  Assets.load(`${base}assets/log2.png`),
+  Assets.load(`${base}assets/log3.png`),
 ]);
 
 // Ground level — 92 % down the screen; everything is derived from this.
@@ -71,11 +79,21 @@ const params = {
 
 // --- Game systems ---
 const truck     = createTruck(world, scene, { carBodyTexture, carWheelTexture, groundY: GROUND_Y });
-const obstacles = createObstacleSystem(world, scene, { stoneTexture, crateTexture, groundY: GROUND_Y });
+const obstacles = createObstacleSystem(world, scene, {
+  stoneTexture, stone2Texture, crateTexture,
+  log1Texture, log2Texture, log3Texture,
+  groundY: GROUND_Y,
+});
 const audio     = await createAudio();
 const ui        = createUI(params, {
   onSuspChange:  () => truck.applySuspension(params),
   onAudioChange: () => audio.applyGains(params),
+  onReset: () => {
+    truck.reset();
+    // Compute camRight *after* reset so lastSpawnX is relative to the spawn position.
+    const camRight = truck.position.x * SCALE + app.screen.width / 2;
+    obstacles.reset(camRight);
+  },
 });
 
 // --- Per-pair friction via contact listener ---

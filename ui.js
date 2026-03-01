@@ -5,7 +5,7 @@ function makeEl(tag, cssText, innerHTML = '') {
   return e;
 }
 
-export function createUI(params, { onSuspChange, onAudioChange } = {}) {
+export function createUI(params, { onSuspChange, onAudioChange, onReset } = {}) {
   // --- Settings toggle button ---
   const toggleBtn = makeEl('div',
     'position:fixed;top:12px;left:12px;z-index:11;width:38px;height:38px;' +
@@ -75,9 +75,21 @@ export function createUI(params, { onSuspChange, onAudioChange } = {}) {
   document.body.appendChild(scoreEl);
   const scoreVal = scoreEl.querySelector('#scoreVal');
 
+  // --- Reset button ---
+  const resetBtn = makeEl('div',
+    'position:fixed;top:12px;right:12px;z-index:11;width:38px;height:38px;' +
+    'background:rgba(0,0,0,.6);color:#fff;border-radius:8px;font:20px monospace;' +
+    'display:flex;align-items:center;justify-content:center;cursor:pointer;' +
+    'user-select:none;-webkit-user-select:none;',
+    '↺'
+  );
+  resetBtn.addEventListener('click', () => onReset?.());
+  resetBtn.addEventListener('touchstart', e => { e.preventDefault(); onReset?.(); }, { passive: false });
+  document.body.appendChild(resetBtn);
+
   // --- Obstacle counter ---
   const counterEl = makeEl('div',
-    'position:fixed;top:12px;right:12px;background:rgba(0,0,0,.6);color:#fff;' +
+    'position:fixed;top:60px;right:12px;background:rgba(0,0,0,.6);color:#fff;' +
     'padding:8px 12px;border-radius:8px;font:12px monospace;z-index:10;line-height:1.6'
   );
   document.body.appendChild(counterEl);
