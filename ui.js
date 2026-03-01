@@ -60,9 +60,9 @@ export function createUI(params, { onSuspChange } = {}) {
   );
   document.body.appendChild(counterEl);
 
-  // --- Rev gauge ---
+  // --- Rev gauge (raised so touch buttons don't overlap it) ---
   const gaugeWrap = makeEl('div',
-    'position:fixed;bottom:24px;right:24px;z-index:10;' +
+    'position:fixed;bottom:130px;right:24px;z-index:10;' +
     'background:rgba(0,0,0,.6);padding:8px 12px;border-radius:8px;' +
     'font:11px monospace;color:#fff;text-align:center;min-width:160px',
     '<div style="letter-spacing:1px;margin-bottom:5px">REV</div>' +
@@ -82,4 +82,37 @@ export function createUI(params, { onSuspChange } = {}) {
       rpmBar.style.background = rpm < 0.6 ? '#44ff44' : rpm < 0.85 ? '#ffdd00' : '#ff3333';
     },
   };
+}
+
+// Touch/click buttons that drive the same `keys` object the keyboard handler uses.
+// onGesture is called on first press so the AudioContext can be resumed.
+export function createTouchControls(keys, { onGesture } = {}) {
+  const btnBase =
+    'position:fixed;bottom:24px;z-index:10;width:120px;height:90px;' +
+    'background:rgba(0,0,0,.55);color:#fff;border:2px solid rgba(255,255,255,.25);' +
+    'border-radius:14px;font:bold 32px monospace;display:flex;flex-direction:column;' +
+    'align-items:center;justify-content:center;gap:4px;cursor:pointer;' +
+    'user-select:none;-webkit-user-select:none;touch-action:none;';
+
+  function makeButton(icon, label, side, key) {
+    const btn = makeEl('div', btnBase + `${side}:24px;`);
+    btn.innerHTML =
+      `<span>${icon}</span>` +
+      `<span style="font-size:10px;opacity:.7;letter-spacing:1px">${label}</span>`;
+
+    const press   = () => { keys[key] = true;  onGesture?.(); btn.style.background = 'rgba(255,255,255,.2)'; };
+    const release = () => { keys[key] = false; btn.style.background = 'rgba(0,0,0,.55)'; };
+
+    btn.addEventListener('touchstart',  e => { e.preventDefault(); press(); },   { passive: false });
+    btn.addEventListener('touchend',    e => { e.preventDefault(); release(); }, { passive: false });
+    btn.addEventListener('touchcancel', e => { e.preventDefault(); release(); }, { passive: false });
+    btn.addEventListener('mousedown',  press);
+    btn.addEventListener('mouseup',    release);
+    btn.addEventListener('mouseleave', release);
+
+    document.body.appendChild(btn);
+  }
+
+  makeButton('◀', 'BRAKE', 'left',  's');
+  makeButton('▶', 'GO',    'right', 'w');
 }

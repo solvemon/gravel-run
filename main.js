@@ -4,12 +4,13 @@ import { SCALE } from './constants.js';
 import { createTruck } from './truck.js';
 import { createObstacleSystem } from './obstacles.js';
 import { createAudio } from './audio.js';
-import { createUI } from './ui.js';
+import { createUI, createTouchControls } from './ui.js';
 
 // --- App ---
 const app = new Application();
 await app.init({ width: 800, height: 500, background: 0x6cc2d9 });
 document.body.appendChild(app.canvas);
+app.canvas.style.touchAction = 'none'; // prevent browser scroll/zoom while playing
 
 // --- Assets ---
 const base = import.meta.env.BASE_URL;
@@ -86,6 +87,7 @@ window.addEventListener('keyup', e => {
   if (e.key === 'w') keys.w = false;
   if (e.key === 's') keys.s = false;
 });
+createTouchControls(keys, { onGesture: () => audio.resume() });
 
 const startX = truck.position.x; // chassis x at spawn, used for distance scoring
 
