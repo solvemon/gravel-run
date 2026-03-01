@@ -70,11 +70,12 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture }) {
     get rpm()      { return rpm; },
 
     // Called every frame — advances RPM simulation, drives motors, syncs sprites
-    update(keys, params) {
-      // RPM inertia: exponential approach up, flywheel coast, brake drop
-      if (keys.w)      rpm += (1 - rpm) * 0.015;
-      else if (keys.s) rpm *= 0.92;
-      else             rpm *= 0.988;
+    update(keys, params, dt = 1) {
+      // RPM inertia scaled by dt so behaviour is frame-rate independent.
+      // Multiplicative decay uses ** dt (correct for exponential falloff).
+      if (keys.w)      rpm += (1 - rpm) * 0.015 * dt;
+      else if (keys.s) rpm *= 0.92 ** dt;
+      else             rpm *= 0.988 ** dt;
 
       const motorSpeed = keys.s ? -params.driveSpeed * 0.5 : params.driveSpeed * rpm;
       for (const { joint } of [frontWheel, rearWheel]) {

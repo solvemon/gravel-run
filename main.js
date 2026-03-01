@@ -92,10 +92,11 @@ createTouchControls(keys, { onGesture: () => audio.resume() });
 const startX = truck.position.x; // chassis x at spawn, used for distance scoring
 
 // --- Game loop ---
-app.ticker.add(() => {
-  world.Step(1 / 60, { velocityIterations: 8, positionIterations: 3 });
+app.ticker.add((ticker) => {
+  const dt = ticker.deltaTime; // 1.0 at 60 fps, 2.0 at 30 fps, 0.5 at 120 fps
+  world.Step(dt / 60, { velocityIterations: 8, positionIterations: 3 });
 
-  truck.update(keys, params);
+  truck.update(keys, params, dt);
 
   const cp        = truck.position;
   const camX      = cp.x * SCALE;
