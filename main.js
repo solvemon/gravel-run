@@ -88,6 +88,7 @@ const audio     = await createAudio();
 const ui        = createUI(params, {
   onSuspChange:  () => truck.applySuspension(params),
   onAudioChange: () => audio.applyGains(params),
+  onMuteToggle: (muted) => audio.setMuted(muted),
   onReset: () => {
     truck.reset();
     // Compute camRight *after* reset so lastSpawnX is relative to the spawn position.

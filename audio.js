@@ -65,6 +65,7 @@ export async function createAudio() {
 
   const rpmParam      = worklet.parameters.get('rpm');
   const throttleParam = worklet.parameters.get('throttle');
+  let lastMasterGain  = masterGain.gain.value; // updated by applyGains; used by setMuted
 
   return {
     // Must be called on the first user gesture (browsers block audio until then)
@@ -79,10 +80,15 @@ export async function createAudio() {
 
     // Called whenever the audio gain sliders change
     applyGains(params) {
-      gainIntake.gain.value = params.gainIntake;
-      gainBlock.gain.value  = params.gainBlock;
-      gainOutlet.gain.value = params.gainOutlet;
-      masterGain.gain.value = params.masterGain;
+      gainIntake.gain.value  = params.gainIntake;
+      gainBlock.gain.value   = params.gainBlock;
+      gainOutlet.gain.value  = params.gainOutlet;
+      lastMasterGain         = params.masterGain;
+      masterGain.gain.value  = params.masterGain;
+    },
+
+    setMuted(muted) {
+      masterGain.gain.value = muted ? 0 : lastMasterGain;
     },
   };
 }

@@ -5,7 +5,7 @@ function makeEl(tag, cssText, innerHTML = '') {
   return e;
 }
 
-export function createUI(params, { onSuspChange, onAudioChange, onReset } = {}) {
+export function createUI(params, { onSuspChange, onAudioChange, onReset, onMuteToggle } = {}) {
   // --- Settings toggle button ---
   const toggleBtn = makeEl('div',
     'position:fixed;top:12px;left:12px;z-index:11;width:38px;height:38px;' +
@@ -74,6 +74,24 @@ export function createUI(params, { onSuspChange, onAudioChange, onReset } = {}) 
   );
   document.body.appendChild(scoreEl);
   const scoreVal = scoreEl.querySelector('#scoreVal');
+
+  // --- Mute button ---
+  let muted = false;
+  const muteBtn = makeEl('div',
+    'position:fixed;top:12px;right:60px;z-index:11;width:38px;height:38px;' +
+    'background:rgba(0,0,0,.6);color:#fff;border-radius:8px;font:20px monospace;' +
+    'display:flex;align-items:center;justify-content:center;cursor:pointer;' +
+    'user-select:none;-webkit-user-select:none;',
+    '🔊'
+  );
+  const toggleMute = () => {
+    muted = !muted;
+    muteBtn.innerHTML = muted ? '🔇' : '🔊';
+    onMuteToggle?.(muted);
+  };
+  muteBtn.addEventListener('click', toggleMute);
+  muteBtn.addEventListener('touchstart', e => { e.preventDefault(); toggleMute(); }, { passive: false });
+  document.body.appendChild(muteBtn);
 
   // --- Reset button ---
   const resetBtn = makeEl('div',
