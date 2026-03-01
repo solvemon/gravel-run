@@ -14,11 +14,13 @@ app.canvas.style.touchAction = 'none'; // prevent browser scroll/zoom while play
 
 // --- Assets ---
 const base = import.meta.env.BASE_URL;
-const [skyTexture, mountainTexture, carBodyTexture, carWheelTexture] = await Promise.all([
+const [skyTexture, mountainTexture, carBodyTexture, carWheelTexture, stoneTexture, crateTexture] = await Promise.all([
   Assets.load(`${base}assets/sky.png`),
   Assets.load(`${base}assets/mountain.png`),
   Assets.load(`${base}assets/car-body.png`),
   Assets.load(`${base}assets/car-wheel.png`),
+  Assets.load(`${base}assets/stone.png`),
+  Assets.load(`${base}assets/crate.png`),
 ]);
 
 // --- Parallax background ---
@@ -55,13 +57,21 @@ const params = {
   frWheelGround:      2,
   frWheelObstacle:    2,
   frObstacleGround:   2,
+  // Audio mix
+  gainIntake:       0.2,
+  gainBlock:        0.7,
+  gainOutlet:       0.2,
+  masterGain:       0.05,
 };
 
 // --- Game systems ---
 const truck     = createTruck(world, scene, { carBodyTexture, carWheelTexture });
-const obstacles = createObstacleSystem(world, scene);
-const audio     = createAudio();
-const ui        = createUI(params, { onSuspChange: () => truck.applySuspension(params) });
+const obstacles = createObstacleSystem(world, scene, { stoneTexture, crateTexture });
+const audio     = await createAudio();
+const ui        = createUI(params, {
+  onSuspChange:  () => truck.applySuspension(params),
+  onAudioChange: () => audio.applyGains(params),
+});
 
 // --- Per-pair friction via contact listener ---
 const listener = new b2ContactListener();

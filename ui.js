@@ -5,7 +5,7 @@ function makeEl(tag, cssText, innerHTML = '') {
   return e;
 }
 
-export function createUI(params, { onSuspChange } = {}) {
+export function createUI(params, { onSuspChange, onAudioChange } = {}) {
   // --- Debug panel ---
   const panel = makeEl('div',
     'position:fixed;top:12px;left:12px;background:rgba(0,0,0,.6);color:#fff;' +
@@ -43,6 +43,10 @@ export function createUI(params, { onSuspChange } = {}) {
   addSlider('Friction wheel/obstacle',    0,   2, 0.05, 'frWheelObstacle',  v => `${v}`);
   addSlider('Friction obstacle/ground',   0,   2, 0.05, 'frObstacleGround', v => `${v}`);
 
+  addSlider('── Gain: intake',            0,   2, 0.05, 'gainIntake',        v => `${v}`,  onAudioChange);
+  addSlider('── Gain: engine block',      0,   2, 0.05, 'gainBlock',         v => `${v}`,  onAudioChange);
+  addSlider('── Gain: exhaust',           0,   2, 0.05, 'gainOutlet',        v => `${v}`,  onAudioChange);
+  addSlider('── Gain: master',            0,   1, 0.005, 'masterGain',        v => `${v}`,  onAudioChange);
   // --- Score display ---
   const scoreEl = makeEl('div',
     'position:fixed;top:12px;left:50%;transform:translateX(-50%);' +
