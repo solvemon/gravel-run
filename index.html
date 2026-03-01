@@ -6,7 +6,20 @@
     <title>Gravel Run</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; height: 100vh; }
+      body {
+        background: #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden; /* prevent page scroll — canvas scales to fit instead */
+      }
+      canvas {
+        max-width: 100vw;
+        max-height: 100vh;
+        height: auto; /* maintain aspect ratio when max-width kicks in (portrait) */
+      }
     </style>
   </head>
   <body>
