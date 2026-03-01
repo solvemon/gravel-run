@@ -6,13 +6,30 @@ function makeEl(tag, cssText, innerHTML = '') {
 }
 
 export function createUI(params, { onSuspChange, onAudioChange } = {}) {
-  // --- Debug panel ---
+  // --- Settings toggle button ---
+  const toggleBtn = makeEl('div',
+    'position:fixed;top:12px;left:12px;z-index:11;width:38px;height:38px;' +
+    'background:rgba(0,0,0,.6);color:#fff;border-radius:8px;font:20px monospace;' +
+    'display:flex;align-items:center;justify-content:center;cursor:pointer;' +
+    'user-select:none;-webkit-user-select:none;',
+    '⚙'
+  );
+  document.body.appendChild(toggleBtn);
+
+  // --- Settings panel (hidden by default) ---
   const panel = makeEl('div',
-    'position:fixed;top:12px;left:12px;background:rgba(0,0,0,.6);color:#fff;' +
+    'position:fixed;top:58px;left:12px;background:rgba(0,0,0,.6);color:#fff;' +
     'padding:10px 14px;border-radius:8px;font:12px monospace;' +
-    'display:flex;flex-direction:column;gap:6px;z-index:10;min-width:300px'
+    'display:none;flex-direction:column;gap:6px;z-index:10;min-width:300px;' +
+    'max-height:calc(100vh - 80px);overflow-y:auto;'
   );
   document.body.appendChild(panel);
+
+  toggleBtn.addEventListener('click', () => {
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display  = isOpen ? 'none' : 'flex';
+    toggleBtn.innerHTML  = isOpen ? '⚙' : '✕';
+  });
 
   // Reads initial value from params[key]; writes back on change
   function addSlider(label, min, max, step, key, fmt, onChange) {
