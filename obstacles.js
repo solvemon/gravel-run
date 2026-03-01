@@ -1,37 +1,62 @@
-import { Graphics } from 'pixi.js';
-import { b2BodyType, b2PolygonShape, b2CircleShape } from '@box2d/core';
+import { Sprite } from 'pixi.js';
+import { b2BodyType, b2PolygonShape } from '@box2d/core';
 import { SCALE } from './constants.js';
 
 const GROUND_Y = 460; // px — top of the ground plane
 
-export function createObstacleSystem(world, scene) {
+// Squares smaller than this (half-size px) use the stone texture; larger ones get a crate.
+const CRATE_THRESHOLD = 8;
+
+// Returns a regular hexagon b2PolygonShape with circumradius r (metres).
+// Six flat-ish sides give natural rolling resistance without being a boring circle.
+function makeHexagon(r) {
+  const verts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i;
+    verts.push({ x: r * Math.cos(a), y: r * Math.sin(a) });
+  }
+  const shape = new b2PolygonShape();
+  shape.Set(verts);
+  return shape;
+}
+
+export function createObstacleSystem(world, scene, { stoneTexture, crateTexture }) {
   const obstacles  = [];
   const bodies     = new Set(); // exposed so main.js can set up the contact listener
   let lastSpawnX   = 800;      // px — rightmost spawned position
   let totalSpawned = 0;
 
   function createObstacle(px, py, halfSize) {
-    const size     = halfSize ?? (3 + Math.random() * 20);
-    const spawnY   = py ?? (GROUND_Y - size - Math.random() * 120);
-    const isCircle = Math.random() < 0.35;
+    const size    = halfSize ?? (3 + Math.random() * 20);
+    const spawnY  = py ?? (GROUND_Y - size - Math.random() * 120);
+    const isRock  = Math.random() < 0.35;
 
     const body = world.CreateBody({
       type: b2BodyType.b2_dynamicBody,
       position: { x: px / SCALE, y: spawnY / SCALE },
     });
-    body.CreateFixture({
-      shape: isCircle
-        ? new b2CircleShape(size / SCALE)
-        : new b2PolygonShape().SetAsBox(size / SCALE, size / SCALE),
-      density: 1, friction: 0.5, restitution: 0.2,
-    });
 
-    const gfx = new Graphics();
-    if (isCircle) gfx.circle(0, 0, size).stroke({ width: 2, color: 0xffffff });
-    else          gfx.rect(-size, -size, size * 2, size * 2).stroke({ width: 2, color: 0xffffff });
-    scene.addChild(gfx);
+    if (isRock) {
+      body.CreateFixture({
+        shape: makeHexagon(size / SCALE),
+        density: 1, friction: 0.7, restitution: 0.15,
+      });
+      body.SetAngularDamping(1.5); // rocks settle rather than spinning forever
+    } else {
+      body.CreateFixture({
+        shape: new b2PolygonShape().SetAsBox(size / SCALE, size / SCALE),
+        density: 1, friction: 0.5, restitution: 0.2,
+      });
+    }
 
-    return { body, gfx };
+    // Rocks and very small boxes → stone texture; larger boxes → crate
+    const texture = (isRock || size < CRATE_THRESHOLD) ? stoneTexture : crateTexture;
+    const sprite  = new Sprite(texture);
+    sprite.anchor.set(0.5);
+    sprite.width = sprite.height = size * 2;
+    scene.addChild(sprite);
+
+    return { body, sprite };
   }
 
   function spawnCluster(centerX) {
@@ -58,18 +83,18 @@ export function createObstacleSystem(world, scene) {
         spawnCluster(lastSpawnX);
       }
 
-      // Sync graphics and remove obstacles that have scrolled off the left
+      // Sync sprites and remove obstacles that have scrolled off the left
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const ob = obstacles[i];
         const op = ob.body.GetPosition();
-        ob.gfx.x        = op.x * SCALE;
-        ob.gfx.y        = op.y * SCALE;
-        ob.gfx.rotation = ob.body.GetAngle();
+        ob.sprite.x        = op.x * SCALE;
+        ob.sprite.y        = op.y * SCALE;
+        ob.sprite.rotation = ob.body.GetAngle();
 
         if (op.x * SCALE < camLeft - 400) {
           bodies.delete(ob.body);
           world.DestroyBody(ob.body);
-          ob.gfx.destroy();
+          ob.sprite.destroy();
           obstacles.splice(i, 1);
         }
       }
