@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, TilingSprite, Assets } from 'pixi.js';
+import { Application, Container, Graphics, TilingSprite, Sprite, Assets } from 'pixi.js';
 import { b2World, b2PolygonShape, b2ContactListener } from '@box2d/core';
 import { SCALE } from './constants.js';
 import { createTruck } from './truck.js';
@@ -18,6 +18,7 @@ const [
   skyTexture, mountainTexture, carBodyTexture, carWheelTexture,
   stoneTexture, stone2Texture, crateTexture,
   log1Texture, log2Texture, log3Texture,
+  groundTileTexture,
 ] = await Promise.all([
   Assets.load(`${base}assets/sky.png`),
   Assets.load(`${base}assets/mountain.png`),
@@ -29,6 +30,7 @@ const [
   Assets.load(`${base}assets/log1.png`),
   Assets.load(`${base}assets/log2.png`),
   Assets.load(`${base}assets/log3.png`),
+  Assets.load(`${base}assets/Tileset_ground.png`),
 ]);
 
 // Ground level — 92 % down the screen; everything is derived from this.
@@ -58,6 +60,20 @@ groundBody.CreateFixture({ shape: new b2PolygonShape().SetAsBox(500, 10 / SCALE)
 const groundGfx = new Graphics().rect(-500 * SCALE, 0, 500 * SCALE * 2, 2000).fill(0x4a7c2f);
 groundGfx.y = GROUND_Y;
 scene.addChild(groundGfx);
+
+// Ground tile strip — individual sprites placed with real overlap so each tile's
+// left edge draws on top of the previous tile's rough right edge.
+const TILE_OVERLAP = 20;
+const TILE_W       = groundTileTexture.width;        // 124 px
+const TILE_STEP    = TILE_W - TILE_OVERLAP;           // 104 px between tile origins
+// Enough sprites to fill the widest expected screen plus one tile of buffer each side.
+const NUM_TILES    = Math.ceil(2000 / TILE_STEP) + 4;
+const tileSprites  = Array.from({ length: NUM_TILES }, () => {
+  const s = new Sprite(groundTileTexture);
+  s.y = GROUND_Y;
+  scene.addChild(s);
+  return s;
+});
 
 // --- Tunable parameters (sliders write directly into this object) ---
 const params = {
@@ -146,6 +162,11 @@ app.ticker.add((ticker) => {
   // Keep ground centred on the chassis so it never ends
   groundBody.SetTransformXY(cp.x, (GROUND_Y + 10) / SCALE, 0);
   groundGfx.x = camX;
+  // Slide the tile pool so it always covers camLeft..camRight
+  const firstTile = Math.floor(camLeft / TILE_STEP);
+  for (let i = 0; i < tileSprites.length; i++) {
+    tileSprites[i].x = (firstTile + i) * TILE_STEP;
+  }
 
   // Camera and parallax
   scene.x = app.screen.width / 2 - camX;
@@ -165,5 +186,6 @@ window.addEventListener('resize', () => {
   mountainSprite.y     = GROUND_Y - MTN_H;
 
   groundGfx.y = GROUND_Y;
+  for (const s of tileSprites) s.y = GROUND_Y;
   obstacles.setGroundY(GROUND_Y);
 });
