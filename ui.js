@@ -34,6 +34,7 @@ export function createUI(params, { onSuspChange } = {}) {
   }
 
   addSlider('Ride height',             -100, 100, 1,    'carBodyYOffset',   v => `${v} px`);
+  addSlider('Wheel radius',               8,  60, 1,    'wheelRadius',      v => `${v} px (⌀${(v * 2 / 48 * 100 | 0)} cm)`);
   addSlider('Spring freq',              0.5,  12, 0.1,  'suspFreq',         v => `${v} Hz`,    onSuspChange);
   addSlider('Damping ratio',           0.05, 1.5, 0.05, 'suspDamping',      v => `${v}`,       onSuspChange);
   addSlider('Motor torque',               5, 500, 5,    'maxTorque',        v => `${v} N·m`);

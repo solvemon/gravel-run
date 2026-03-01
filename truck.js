@@ -4,7 +4,7 @@ import { SCALE } from './constants.js';
 
 const CHASSIS_HW = 120; // px half-width
 const CHASSIS_HH = 20;  // px half-height
-const WHEEL_R    = 28;  // px radius
+const WHEEL_R    = 29;  // px radius — 29/48 ≈ 0.60 m → ~1.2 m diameter
 
 export function createTruck(world, scene, { carBodyTexture, carWheelTexture }) {
   // --- Chassis ---
@@ -105,6 +105,7 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture }) {
         sprite.x        = la.x * SCALE;
         sprite.y        = (la.y + t) * SCALE;
         sprite.rotation = body.GetAngle() - ca; // wheel spin relative to chassis
+        sprite.width = sprite.height = params.wheelRadius * 2; // visual size from slider
       }
     },
 

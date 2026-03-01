@@ -46,12 +46,13 @@ scene.addChild(groundGfx);
 
 // --- Tunable parameters (sliders write directly into this object) ---
 const params = {
-  carBodyYOffset:   -25,  // px — shifts body sprite so wheel arches align with physics wheels
-  driveSpeed:         4,  // rad/s (reverse is always half)
-  maxTorque:        250,  // N·m
-  suspFreq:           2,  // Hz
-  suspDamping:     0.35,
-  frWheelGround:    0.8,
+  carBodyYOffset:   -37,  // px — shifts body sprite so wheel arches align with physics wheels
+  wheelRadius:       29,  // px — visual only; physics radius is fixed at 29 px (0.60 m)
+  driveSpeed:        14,  // rad/s (reverse is always half)
+  maxTorque:        260,  // N·m
+  suspFreq:         3.7,  // Hz
+  suspDamping:      0.5,
+  frWheelGround:      2,
   frWheelObstacle:    2,
   frObstacleGround:   2,
 };
