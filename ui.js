@@ -55,6 +55,7 @@ export function createUI(params, { onSuspChange, onAudioChange, onReset, onMuteT
   addSlider('Spring freq',              0.5,  12, 0.1,  'suspFreq',         v => `${v} Hz`,    onSuspChange);
   addSlider('Damping ratio',           0.05, 1.5, 0.05, 'suspDamping',      v => `${v}`,       onSuspChange);
   addSlider('Motor torque',               5, 500, 5,    'maxTorque',        v => `${v} N·m`);
+  addSlider('Roll resistance',            0, 100, 1,    'rollResistance',   v => `${v} N·m`);
   addSlider('Max speed',                  1,  40, 1,    'driveSpeed',       v => `${v} rad/s`);
   addSlider('Friction wheel/ground',      0,   2, 0.05, 'frWheelGround',    v => `${v}`);
   addSlider('Friction wheel/obstacle',    0,   2, 0.05, 'frWheelObstacle',  v => `${v}`);

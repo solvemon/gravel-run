@@ -75,24 +75,32 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture, gro
   pivot.addChild(debugGfx); // child of pivot → auto-rotates with chassis
 
   let rpm = 0;
+  let reverseRpm = 0;
 
   return {
     wheelBodies: new Set([frontWheel.body, rearWheel.body]),
     get position() { return chassisBody.GetPosition(); },
-    get rpm()      { return rpm; },
+    get rpm()      { return Math.max(rpm, reverseRpm); },
 
     // Called every frame — advances RPM simulation, drives motors, syncs sprites
     update(keys, params, dt = 1) {
-      // RPM inertia scaled by dt so behaviour is frame-rate independent.
-      // Multiplicative decay uses ** dt (correct for exponential falloff).
-      if (keys.w)      rpm += (1 - rpm) * 0.015 * dt;
-      else if (keys.s) rpm *= 0.92 ** dt;
-      else             rpm *= 0.988 ** dt;
+      if (keys.w) {
+        rpm        += (1 - rpm) * 0.015 * dt;
+        reverseRpm *= 0.92 ** dt;
+      } else if (keys.s) {
+        reverseRpm += (1 - reverseRpm) * 0.015 * dt;
+        rpm        *= 0.92 ** dt;
+      } else {
+        rpm        *= 0.988 ** dt;
+        reverseRpm *= 0.988 ** dt;
+      }
 
-      const motorSpeed = keys.s ? -params.driveSpeed * 0.5 : params.driveSpeed * rpm;
+      const coasting   = !keys.w && !keys.s;
+      const motorSpeed = keys.s ? -params.driveSpeed * 0.5 * reverseRpm : params.driveSpeed * rpm;
+      const torque     = coasting ? params.rollResistance : params.maxTorque;
       for (const { joint } of [frontWheel, rearWheel]) {
         joint.SetMotorSpeed(motorSpeed);
-        joint.SetMaxMotorTorque(params.maxTorque);
+        joint.SetMaxMotorTorque(torque);
       }
 
       const cp = chassisBody.GetPosition();
@@ -141,6 +149,7 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture, gro
     // Teleport everything back to spawn and zero all velocities
     reset() {
       rpm = 0;
+      reverseRpm = 0;
       const zero = { x: 0, y: 0 };
       chassisBody.SetTransformXY(SPAWN_CX / SCALE, SPAWN_CY / SCALE, 0);
       chassisBody.SetLinearVelocity(zero);

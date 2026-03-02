@@ -83,6 +83,7 @@ const params = {
   maxTorque:        260,  // N·m
   suspFreq:         3.7,  // Hz
   suspDamping:      0.5,
+  rollResistance:    15,  // N·m — motor torque limit while coasting (low = rolls freely)
   frWheelGround:      2,
   frWheelObstacle:    2,
   frObstacleGround:   2,
