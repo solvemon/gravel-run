@@ -91,7 +91,8 @@ export function createObstacleSystem(world, scene, {
     const body   = makeBody(px, spawnY);
     body.CreateFixture({ shape: new b2PolygonShape().SetAsBox(hw / SCALE, hh / SCALE), density: 0.7, friction: 0.5, restitution: 0.08 });
     body.SetAngularDamping(0.4);
-    return { body, sprite: makeSprite(texMap[def.key], hw * 2, hh * 2) };
+    const VIS = 1.25; // sprite slightly larger than hitbox so branches/edges don't float
+    return { body, sprite: makeSprite(texMap[def.key], hw * 2 * VIS, hh * 2 * VIS) };
   }
 
   // Box / crate — square; small boxes use stone, large use crate
