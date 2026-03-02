@@ -79,8 +79,15 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture, gro
 
   return {
     wheelBodies: new Set([frontWheel.body, rearWheel.body]),
-    get position() { return chassisBody.GetPosition(); },
-    get rpm()      { return Math.max(rpm, reverseRpm); },
+    get position()     { return chassisBody.GetPosition(); },
+    get rpm()          { return Math.max(rpm, reverseRpm); },
+    get velocity()     { return chassisBody.GetLinearVelocity(); },
+    get wheelBottoms() {
+      return [frontWheel, rearWheel].map(({ body }) => {
+        const p = body.GetPosition();
+        return { x: p.x * SCALE, y: p.y * SCALE + WHEEL_R };
+      });
+    },
 
     // Called every frame — advances RPM simulation, drives motors, syncs sprites
     update(keys, params, dt = 1) {

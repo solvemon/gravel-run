@@ -1,10 +1,11 @@
 import { Application, Container, Graphics, TilingSprite, Sprite, Assets } from 'pixi.js';
-import { b2World, b2PolygonShape, b2ContactListener } from '@box2d/core';
+import { b2World, b2PolygonShape, b2ContactListener, b2WorldManifold } from '@box2d/core';
 import { SCALE } from './constants.js';
 import { createTruck } from './truck.js';
 import { createObstacleSystem } from './obstacles.js';
 import { createAudio } from './audio.js';
 import { createUI, createTouchControls } from './ui.js';
+import { createDustSystem } from './particles.js';
 
 // --- App ---
 const app = new Application();
@@ -128,6 +129,20 @@ listener.PreSolve = (contact) => {
   else if ((aWheel && bObstacle)  || (bWheel && aObstacle))  contact.SetFriction(params.frWheelObstacle);
   else if ((aObstacle && bGround) || (bObstacle && aGround)) contact.SetFriction(params.frObstacleGround);
 };
+// Track wheel–obstacle contacts as contact objects so we can query the exact contact point.
+const wheelObstacleContacts = new Set();
+const _wm = new b2WorldManifold(); // reused every frame — avoids allocations
+
+listener.BeginContact = (contact) => {
+  const bodyA = contact.GetFixtureA().GetBody();
+  const bodyB = contact.GetFixtureB().GetBody();
+  const aWheel = truck.wheelBodies.has(bodyA), bWheel = truck.wheelBodies.has(bodyB);
+  const aObs   = obstacles.bodies.has(bodyA),  bObs   = obstacles.bodies.has(bodyB);
+  if ((aWheel && bObs) || (bWheel && aObs)) wheelObstacleContacts.add(contact);
+};
+listener.EndContact = (contact) => {
+  wheelObstacleContacts.delete(contact);
+};
 world.SetContactListener(listener);
 
 // --- Input ---
@@ -143,6 +158,12 @@ window.addEventListener('keyup', e => {
   if (e.key === 's') keys.s = false;
 });
 createTouchControls(keys, { onGesture: () => audio.resume() });
+
+const dust  = createDustSystem(scene);
+
+// --- Screen shake state ---
+let shakeMag = 0;
+let prevVelY = 0;
 
 const startX = truck.position.x; // chassis x at spawn, used for distance scoring
 
@@ -163,6 +184,31 @@ app.ticker.add((ticker) => {
   audio.update(truck.rpm);
   ui.update({ score: distanceM, spawned: obstacles.total, alive: obstacles.count, rpm: truck.rpm });
 
+  // --- Screen shake: detect sudden vertical velocity change (impacts / landings) ---
+  const velY = truck.velocity.y;
+  const dvY  = Math.abs(velY - prevVelY);
+  prevVelY   = velY;
+  if (dvY > 4) shakeMag = Math.min(shakeMag + (dvY - 4) * 0.25, 3);
+  shakeMag *= 0.72 ** dt;
+  const shakeX = (Math.random() * 2 - 1) * shakeMag;
+  const shakeY = (Math.random() * 2 - 1) * shakeMag * 0.6;
+
+  // --- Wheel dust (only when wheels are near the ground) ---
+  const velXms     = truck.velocity.x; // m/s — particles.js scales this itself
+  const wheelPts   = truck.wheelBottoms;
+  const nearGround = wheelPts.filter(w => w.y >= GROUND_Y - 12);
+  dust.update(dt, truck.rpm, nearGround, velXms);
+
+  // --- Obstacle contact debris — spawn at the actual contact point ---
+  for (const contact of wheelObstacleContacts) {
+    if (!contact.IsTouching()) continue;
+    contact.GetWorldManifold(_wm);
+    const n = contact.GetManifold().pointCount;
+    for (let i = 0; i < n; i++) {
+      dust.emitImpact(_wm.points[i].x * SCALE, _wm.points[i].y * SCALE, truck.rpm);
+    }
+  }
+
   // Keep ground centred on the chassis so it never ends
   groundBody.SetTransformXY(cp.x, (GROUND_Y + 10) / SCALE, 0);
   groundGfx.x = camX;
@@ -172,10 +218,12 @@ app.ticker.add((ticker) => {
     tileSprites[i].x = (firstTile + i) * TILE_STEP;
   }
 
-  // Camera and parallax
-  scene.x = app.screen.width / 2 - camX;
-  skySprite.tilePosition.x      = scene.x * 0.05;
-  mountainSprite.tilePosition.x = scene.x * 0.15;
+  // Camera and parallax (shake applied to scene only, not background)
+  const baseSceneX = app.screen.width / 2 - camX;
+  scene.x = baseSceneX + shakeX;
+  scene.y = shakeY;
+  skySprite.tilePosition.x      = baseSceneX * 0.05;
+  mountainSprite.tilePosition.x = baseSceneX * 0.15;
 });
 
 // --- Resize handler ---
