@@ -110,6 +110,7 @@ const ui        = createUI(params, {
     // Compute camRight *after* reset so lastSpawnX is relative to the spawn position.
     const camRight = truck.position.x * SCALE + app.screen.width / 2;
     obstacles.reset(camRight);
+    ui.resetBest();
   },
 });
 

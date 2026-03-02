@@ -65,15 +65,22 @@ export function createUI(params, { onSuspChange, onAudioChange, onReset, onMuteT
   addSlider('── Gain: exhaust',           0,   2, 0.05, 'gainOutlet',        v => `${v}`,  onAudioChange);
   addSlider('── Gain: master',            0,   1, 0.005, 'masterGain',        v => `${v}`,  onAudioChange);
   // --- Score display ---
+  let best       = parseInt(localStorage.getItem('gravel-run-best') || '0');
+  let savedBest  = best; // threshold for the current run — updated on reset
+
   const scoreEl = makeEl('div',
     'position:fixed;top:12px;left:50%;transform:translateX(-50%);' +
     'background:rgba(0,0,0,.6);color:#fff;padding:8px 24px;border-radius:8px;' +
     'font:bold 22px monospace;z-index:10;text-align:center;line-height:1.5',
     '<div style="font-size:11px;opacity:.7;letter-spacing:1px">DISTANCE</div>' +
-    '<div id="scoreVal">0 m</div>'
+    '<div id="scoreVal">0 m</div>' +
+    '<div id="bestRow" style="font-size:11px;opacity:.6;font-weight:normal;margin-top:1px">' +
+      `BEST: ${best} m` +
+    '</div>'
   );
   document.body.appendChild(scoreEl);
   const scoreVal = scoreEl.querySelector('#scoreVal');
+  const bestRow  = scoreEl.querySelector('#bestRow');
 
   // --- Mute button ---
   let muted = false;
@@ -128,11 +135,22 @@ export function createUI(params, { onSuspChange, onAudioChange, onReset, onMuteT
   return {
     // Called every frame
     update({ score, spawned, alive, rpm }) {
-      scoreVal.textContent = `${Math.floor(score)} m`;
+      const dist = Math.floor(score);
+      scoreVal.textContent = `${dist} m`;
       counterEl.innerHTML  = `Spawned: ${spawned}<br>Alive: ${alive}`;
       rpmBar.style.width      = `${rpm * 100}%`;
       rpmBar.style.background = rpm < 0.6 ? '#44ff44' : rpm < 0.85 ? '#ffdd00' : '#ff3333';
+
+      if (dist > best) {
+        best = dist;
+        localStorage.setItem('gravel-run-best', best);
+      }
+      const isRecord = dist > savedBest;
+      bestRow.textContent = `${isRecord ? '★ ' : ''}BEST: ${best} m`;
     },
+
+    // Call on reset so the star threshold advances to the new best
+    resetBest() { savedBest = best; },
   };
 }
 
