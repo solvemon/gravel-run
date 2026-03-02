@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, TilingSprite, Sprite, Assets } from 'pixi.js';
+import { Application, Container, Graphics, TilingSprite, Sprite, Assets, ColorMatrixFilter, Texture } from 'pixi.js';
 import { b2World, b2PolygonShape, b2ContactListener, b2WorldManifold } from '@box2d/core';
 import { SCALE } from './constants.js';
 import { createTruck } from './truck.js';
@@ -167,6 +167,88 @@ let prevVelY = 0;
 
 const startX = truck.position.x; // chassis x at spawn, used for distance scoring
 
+// ── Visual atmosphere effects ──────────────────────────────────────────────
+
+// Helper: linearly interpolate between two packed RGB hex colours
+function lerpColor(a, b, t) {
+  const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
+  const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff;
+  return (Math.round(ar + (br - ar) * t) << 16) |
+         (Math.round(ag + (bg - ag) * t) << 8) |
+          Math.round(ab + (bb - ab) * t);
+}
+
+// Distance-based sky tint: day (no tint) → golden hour → dusk
+const SKY_STOPS = [
+  { dist:   0, skyTint: 0xffffff, mtnTint: 0xffffff },
+  { dist: 300, skyTint: 0xffcc88, mtnTint: 0xffaa66 },
+  { dist: 700, skyTint: 0xcc99ee, mtnTint: 0x9966bb },
+];
+
+function skyTintAt(dist) {
+  for (let i = 0; i < SKY_STOPS.length - 1; i++) {
+    const a = SKY_STOPS[i], b = SKY_STOPS[i + 1];
+    if (dist <= b.dist) {
+      const t = (dist - a.dist) / (b.dist - a.dist);
+      return { skyTint: lerpColor(a.skyTint, b.skyTint, t), mtnTint: lerpColor(a.mtnTint, b.mtnTint, t) };
+    }
+  }
+  const l = SKY_STOPS[SKY_STOPS.length - 1];
+  return { skyTint: l.skyTint, mtnTint: l.mtnTint };
+}
+
+// 1. Warm colour grade on the game scene (boost reds, dim blues)
+const warmFilter = new ColorMatrixFilter();
+warmFilter.matrix = [
+  1.08, 0,    0,    0, 0.01,
+  0,    0.98, 0,    0, 0,
+  0,    0,    0.87, 0, 0,
+  0,    0,    0,    1, 0,
+];
+scene.filters = [warmFilter];
+
+// 2. Film grain (static noise texture with random tilePosition each frame)
+function buildGrainTexture(size = 256) {
+  const cv  = document.createElement('canvas');
+  cv.width  = cv.height = size;
+  const ctx = cv.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = Math.random() * 255 | 0;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return Texture.from(cv);
+}
+const grainSprite = new TilingSprite({
+  texture: buildGrainTexture(),
+  width:   app.screen.width,
+  height:  app.screen.height,
+});
+grainSprite.alpha     = 0.035;
+grainSprite.blendMode = 'screen';
+app.stage.addChild(grainSprite);
+
+// 3. Vignette overlay (darkens screen edges)
+function buildVignetteTexture(w, h) {
+  const cv  = document.createElement('canvas');
+  cv.width  = w;
+  cv.height = h;
+  const ctx = cv.getContext('2d');
+  const cx  = w / 2, cy = h / 2;
+  const grad = ctx.createRadialGradient(cx, cy, Math.min(w, h) * 0.3, cx, cy, Math.max(w, h) * 0.78);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+  return Texture.from(cv);
+}
+const vignetteSprite = new Sprite(buildVignetteTexture(app.screen.width, app.screen.height));
+vignetteSprite.width  = app.screen.width;
+vignetteSprite.height = app.screen.height;
+app.stage.addChild(vignetteSprite); // on top of grain
+
 // --- Game loop ---
 app.ticker.add((ticker) => {
   const dt = ticker.deltaTime; // 1.0 at 60 fps, 2.0 at 30 fps, 0.5 at 120 fps
@@ -183,6 +265,13 @@ app.ticker.add((ticker) => {
   obstacles.update(camLeft, camRight, distanceM);
   audio.update(truck.rpm);
   ui.update({ score: distanceM, spawned: obstacles.total, alive: obstacles.count, rpm: truck.rpm });
+
+  // --- Visual atmosphere ---
+  const { skyTint, mtnTint } = skyTintAt(distanceM);
+  skySprite.tint      = skyTint;
+  mountainSprite.tint = mtnTint;
+  grainSprite.tilePosition.x = Math.random() * 256;
+  grainSprite.tilePosition.y = Math.random() * 256;
 
   // --- Screen shake: detect sudden vertical velocity change (impacts / landings) ---
   const velY = truck.velocity.y;
@@ -240,4 +329,12 @@ window.addEventListener('resize', () => {
   groundGfx.y = GROUND_Y;
   for (const s of tileSprites) s.y = GROUND_Y;
   obstacles.setGroundY(GROUND_Y);
+
+  vignetteSprite.texture.destroy(true);
+  vignetteSprite.texture = buildVignetteTexture(app.screen.width, app.screen.height);
+  vignetteSprite.width  = app.screen.width;
+  vignetteSprite.height = app.screen.height;
+
+  grainSprite.width  = app.screen.width;
+  grainSprite.height = app.screen.height;
 });
