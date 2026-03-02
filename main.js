@@ -105,6 +105,7 @@ const ui        = createUI(params, {
   onSuspChange:  () => truck.applySuspension(params),
   onAudioChange: () => audio.applyGains(params),
   onMuteToggle: (muted) => audio.setMuted(muted),
+  onDebugToggle: () => truck.toggleDebug(),
   onReset: () => {
     truck.reset();
     // Compute camRight *after* reset so lastSpawnX is relative to the spawn position.
@@ -133,6 +134,7 @@ const keys = { w: false, s: false };
 window.addEventListener('keydown', e => {
   if (e.key === 'w') keys.w = true;
   if (e.key === 's') keys.s = true;
+  if (e.key === 'd') truck.toggleDebug();
   audio.resume(); // browsers require a user gesture before audio starts
 });
 window.addEventListener('keyup', e => {

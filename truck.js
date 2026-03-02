@@ -1,9 +1,10 @@
-import { Sprite, Container } from 'pixi.js';
+import { Sprite, Container, Graphics } from 'pixi.js';
 import { b2BodyType, b2PolygonShape, b2CircleShape, b2WheelJointDef, b2LinearStiffness } from '@box2d/core';
 import { SCALE } from './constants.js';
 
 const CHASSIS_HW = 120; // px half-width
 const CHASSIS_HH = 20;  // px half-height
+const CHASSIS_OY = -25; // px — fixture offset upward relative to body origin
 const WHEEL_R    = 29;  // px radius — 29/48 ≈ 0.60 m → ~1.2 m diameter
 
 export function createTruck(world, scene, { carBodyTexture, carWheelTexture, groundY = 460 }) {
@@ -13,7 +14,9 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture, gro
     position: { x: 400 / SCALE, y: (groundY - 310) / SCALE },
   });
   chassisBody.CreateFixture({
-    shape: new b2PolygonShape().SetAsBox(CHASSIS_HW / SCALE, CHASSIS_HH / SCALE),
+    shape: new b2PolygonShape().SetAsBox(
+      CHASSIS_HW / SCALE, CHASSIS_HH / SCALE,
+      { x: 0, y: CHASSIS_OY / SCALE }, 0),
     density: 2,
     friction: 0.3,
   });
@@ -66,6 +69,11 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture, gro
   chassisSprite.scale.set((CHASSIS_HW * 2) / carBodyTexture.width);
   pivot.addChild(chassisSprite);
 
+  // --- Debug hitbox overlay (toggled with D key) ---
+  const debugGfx = new Graphics();
+  debugGfx.visible = false;
+  pivot.addChild(debugGfx); // child of pivot → auto-rotates with chassis
+
   let rpm = 0;
 
   return {
@@ -111,6 +119,23 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture, gro
         sprite.rotation = body.GetAngle() - ca; // wheel spin relative to chassis
         sprite.width = sprite.height = params.wheelRadius * 2; // visual size from slider
       }
+
+      // Debug: redraw physics outlines every frame (only when visible)
+      if (debugGfx.visible) {
+        debugGfx.clear();
+        // Chassis box — red (offset matches the fixture centre)
+        debugGfx
+          .rect(-CHASSIS_HW, CHASSIS_OY - CHASSIS_HH, CHASSIS_HW * 2, CHASSIS_HH * 2)
+          .stroke({ color: 0xff2222, width: 2, alpha: 0.9 });
+        // Wheels — green circles at their chassis-local positions (physics radius, not visual)
+        for (const { joint } of [frontWheel, rearWheel]) {
+          const la = joint.GetLocalAnchorA();
+          const t  = joint.GetJointTranslation();
+          debugGfx
+            .circle(la.x * SCALE, (la.y + t) * SCALE, WHEEL_R)
+            .stroke({ color: 0x22ff22, width: 2, alpha: 0.9 });
+        }
+      }
     },
 
     // Teleport everything back to spawn and zero all velocities
@@ -127,6 +152,8 @@ export function createTruck(world, scene, { carBodyTexture, carWheelTexture, gro
       rearWheel.body.SetLinearVelocity(zero);
       rearWheel.body.SetAngularVelocity(0);
     },
+
+    toggleDebug() { debugGfx.visible = !debugGfx.visible; },
 
     // Call when suspFreq or suspDamping changes
     applySuspension(params) {

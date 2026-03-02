@@ -5,7 +5,7 @@ function makeEl(tag, cssText, innerHTML = '') {
   return e;
 }
 
-export function createUI(params, { onSuspChange, onAudioChange, onReset, onMuteToggle } = {}) {
+export function createUI(params, { onSuspChange, onAudioChange, onReset, onMuteToggle, onDebugToggle } = {}) {
   // --- Settings toggle button ---
   const toggleBtn = makeEl('div',
     'position:fixed;top:12px;left:12px;z-index:11;width:38px;height:38px;' +
@@ -64,6 +64,16 @@ export function createUI(params, { onSuspChange, onAudioChange, onReset, onMuteT
   addSlider('── Gain: engine block',      0,   2, 0.05, 'gainBlock',         v => `${v}`,  onAudioChange);
   addSlider('── Gain: exhaust',           0,   2, 0.05, 'gainOutlet',        v => `${v}`,  onAudioChange);
   addSlider('── Gain: master',            0,   1, 0.005, 'masterGain',        v => `${v}`,  onAudioChange);
+
+  // --- Debug toggle ---
+  const dbgRow = makeEl('div', 'display:flex;align-items:center;gap:8px;margin-top:4px');
+  const dbgLbl = makeEl('span', 'width:150px;flex-shrink:0');
+  dbgLbl.textContent = 'Show hitboxes';
+  const dbgChk = makeEl('input', '');
+  dbgChk.type = 'checkbox';
+  dbgChk.addEventListener('change', () => onDebugToggle?.());
+  dbgRow.append(dbgLbl, dbgChk);
+  panel.appendChild(dbgRow);
   // --- Score display ---
   let best       = parseInt(localStorage.getItem('gravel-run-best') || '0');
   let savedBest  = best; // threshold for the current run — updated on reset
